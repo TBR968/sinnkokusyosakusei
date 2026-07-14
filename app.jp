@@ -1,79 +1,188 @@
-// 画面が読み込まれたら計算を実行し、入力イベントを監視する
 document.addEventListener('DOMContentLoaded', () => {
-    // 保存されたデータがあれば復元
+    // 保存データがあれば復元
     loadSavedData();
     
-    // すべての入力項目（input要素）を監視し、値が変わるたびに自動計算を実行
-    const inputs = document.querySelectorAll('input[type="number"]');
-    inputs.forEach(input => {
-        input.addEventListener('input', calculateTax);
+    // 画面上のすべての数値入力欄を監視対象にする
+    const allInputs = document.querySelectorAll('input[type="number"]');
+    allInputs.forEach(input => {
+        // キーボードを叩く、または数字が変わる瞬間にリアルタイム計算を実行
+        input.addEventListener('input', calculateAllTax);
+        input.addEventListener('change', calculateAllTax);
     });
 
-    // 最初の計算を実行
-    calculateTax();
+    // 初期起動時の1回目計算
+    calculateAllTax();
 });
 
-// 計算処理の本体
-function calculateTax() {
-    // --- 1. 別表四の計算 ---
-    const tokiRieki = parseFloat(document.getElementById('toki_rieki').value) || 0;
-    const hojinzeiKasan = parseFloat(document.getElementById('hojinzei_kasan').value) || 0;
-    const住民税Kasan = parseFloat(document.getElementById('juumin_kasan').value) || 0;
-    const nozeiKasan = parseFloat(document.getElementById('nozei_kasan').value) || 0;
-    const kosaishiKasan = parseFloat(document.getElementById('kosaishi_kasan').value) || 0;
-    
-    // 加算合計（小計 11）
-    const kasanShokei = hojinzeiKasan + 住民税Kasan + nozeiKasan + kosaishiKasan;
-    document.getElementById('kasan_shokei').value = kasanShokei;
-
-    // 中間計（23） ＝ ①当期利益 ＋ ⑪加算小計 
-    // (減算項目がない簡易版のため、減算合計22は0として計算します)
-    const chukanKei = tokiRieki + kasanShokei;
-    document.getElementById('chukan_kei').value = chukanKei;
-
-    // 所得金額（48） ＝ 中間計
-    const shotokuGaku = chukanKei;
-    document.getElementById('shotoku_gaku').value = shotokuGaku;
-
-    // --- 2. 別表一（一）への連動と計算 ---
-    // 別表四の「48」を別表一の「① 課税標準」にそのまま転記
-    document.getElementById('kazei_hyojun').value = shotokuGaku;
-
-    // 税額の計算（千円未満切り捨ての法人税率15%を適用）
-    // 課税標準が0以下の場合は税額も0
-    let hojinZeigaku = 0;
-    if (shotokuGaku > 0) {
-        // 千円未満切り捨て（例：1,234,567円 → 1,234,000円）
-        const kazeiKiri = Math.floor(shotokuGaku / 1000) * 1000;
-        // 税率 15% で計算
-        const zeigakuS算出 = kazeiKiri * 0.15;
-        // 税額自体の百円未満切り捨て（実務ルール）
-        hojinZeigaku = Math.floor(zeigakuS算出 / 100) * 100;
-    }
-    document.getElementById('hojin_zeigaku').value = hojinZeigaku;
+// 安全に数値を取得する関数（空欄は0とする）
+function getVal(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return parseFloat(el.value) || 0;
 }
 
-// データの保存処理
+// 読み取り専用のセルに計算結果をセットする関数
+function setVal(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.value = Math.round(value); // 小数点以下丸め
+    }
+}
+
+function calculateAllTax() {
+    // --- ① 1行目: 当期利益 ---
+    const v1 = getVal('v1');
+    const v1_r = getVal('v1_r');
+
+    // --- ② 加算項目（2〜10） ---
+    const v2 = getVal('v2');
+    const v3 = getVal('v3');
+    const v4 = getVal('v4');
+    const v5 = getVal('v5');
+    const v6 = getVal('v6');
+    const v7 = getVal('v7');
+    const v8 = getVal('v8');
+    const v9 = getVal('v9');
+    const v10 = getVal('v10');
+
+    const v2_s = getVal('v2_s');
+    const v3_s = getVal('v3_s');
+    const v4_r = getVal('v4_r');
+    const v6_r = getVal('v6_r');
+    const v7_s = getVal('v7_s');
+    const v8_s = getVal('v8_s');
+    const v9_r = getVal('v9_r');
+    const v10_r = getVal('v10_r');
+    const v10_p = getVal('v10_p');
+    const v10_s = getVal('v10_s');
+
+    // 【計算】11 加算小計
+    const v11 = v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10;
+    const v11_r = v4_r + v6_r + v9_r + v10_r;
+    const v11_p = v10_p;
+    const v11_s = v2_s + v3_s + v5_s + v7_s + v8_s + v10_s;
+
+    setVal('v11', v11);
+    setVal('v11_r', v11_r);
+    setVal('v11_p', v11_p);
+    setVal('v11_s', v11_s);
+
+    // --- ③ 減算項目（12〜21） ---
+    const v12 = getVal('v12');
+    const v13 = getVal('v13');
+    const v14 = getVal('v14');
+    const v15 = getVal('v15');
+    const v16 = getVal('v16');
+    const v17 = getVal('v17');
+    const v18 = getVal('v18');
+    const v19 = getVal('v19');
+    const v20 = getVal('v20');
+    const v21 = getVal('v21');
+
+    const v12_r = getVal('v12_r');
+    const v19_r = getVal('v19_r');
+    const v20_r = getVal('v20_r');
+    const v21_r = getVal('v21_r');
+
+    // 【計算】22 減算小計
+    const v22 = v12 + v13 + v14 + v15 + v16 + v17 + v18 + v19 + v20 + v21;
+    const v22_r = v12_r + v19_r + v20_r + v21_r;
+
+    setVal('v22', v22);
+    setVal('v22_r', v22_r);
+
+    // 【計算】23 仮計 (1)+(11)-(22)
+    const v23 = v1 + v11 - v22;
+    const v23_r = v1_r + v11_r - v22_r;
+    const v23_p = v11_p;
+    const v23_s = v11_s;
+
+    setVal('v23', v23);
+    setVal('v23_r', v23_r);
+    setVal('v23_p', v23_p);
+    setVal('v23_s', v23_s);
+
+    // --- ④ 利子額（24〜25） ---
+    const v24 = getVal('v24');
+    const v24_r = getVal('v24_r');
+    const v25 = getVal('v25');
+    const v25_r = getVal('v25_r');
+
+    // 【計算】26 総計 (23)+(24)-(25)
+    const v26 = v23 + v24 - v25;
+    const v26_r = v23_r + v24_r - v25_r;
+    const v26_p = v23_p;
+    const v26_s = v23_s;
+
+    setVal('v26', v26);
+    setVal('v26_r', v26_r);
+    setVal('v26_p', v26_p);
+    setVal('v26_s', v26_s);
+
+    // --- ⑤ 寄附金等（27） ---
+    const v27 = getVal('v27');
+    const v27_s = getVal('v27_s');
+
+    // 【計算】48 所得金額 (26)+(27)
+    const v48 = v26 + v27;
+    const v48_r = v26_r;
+    const v48_p = v26_p;
+    const v48_s = v26_s + v27_s;
+
+    setVal('v48', v48);
+    setVal('v48_r', v48_r);
+    setVal('v48_p', v48_p);
+    setVal('v48_s', v48_s);
+
+
+    // ==========================================
+    // --- ⑥ 別表一（一）への連動計算 ---
+    // ==========================================
+    // 課税標準 = 別表四の48
+    setVal('kazei_hyojun', v48);
+
+    // 法人税額の計算 (15%適用、千円未満切り捨て、税額百円未満切り捨て)
+    let hojinZeigaku = 0;
+    if (v48 > 0) {
+        // 1. 課税標準を千円未満切り捨て
+        const kazeiKiri = Math.floor(v48 / 1000) * 1000;
+        // 2. 税率15%を掛ける
+        const rawZeigaku = kazeiKiri * 0.15;
+        // 3. 算出された税額の百円未満を切り捨て
+        hojinZeigaku = Math.floor(rawZeigaku / 100) * 100;
+    }
+    setVal('hojin_zeigaku', hojinZeigaku);
+}
+
+// データのローカル保存
 function saveData() {
     const data = {};
     const inputs = document.querySelectorAll('input[type="number"]');
     inputs.forEach(input => {
         data[input.id] = input.value;
     });
-    localStorage.setItem('tax_app_data', JSON.stringify(data));
+    localStorage.setItem('tax_mjs_app_data', JSON.stringify(data));
     
     const status = document.getElementById('status');
-    status.textContent = 'データ保存済';
-    status.style.backgroundColor = '#2b579a';
+    status.textContent = '● 一時保存完了';
+    status.style.backgroundColor = '#107c41';
     setTimeout(() => {
-        status.textContent = 'オンライン';
+        status.textContent = 'システムオンライン';
         status.style.backgroundColor = '#34a853';
     }, 2000);
 }
 
-// データの読み込み処理
+// 保存データ消去
+function clearData() {
+    if(confirm("入力された全ての数値を初期化します。よろしいですか？")) {
+        localStorage.removeItem('tax_mjs_app_data');
+        location.reload(true);
+    }
+}
+
+// ローカルからデータの復元
 function loadSavedData() {
-    const saved = localStorage.getItem('tax_app_data');
+    const saved = localStorage.getItem('tax_mjs_app_data');
     if (saved) {
         const data = JSON.parse(saved);
         for (const id in data) {
