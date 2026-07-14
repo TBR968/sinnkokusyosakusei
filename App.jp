@@ -1,0 +1,78 @@
+// PWAサービスワーカーの登録
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker Registered'))
+        .catch(err => console.error('Service Worker Registry Failed', err));
+}
+
+// UI要素の取得
+const inputTokiRieki = document.getElementById('toki_rieki');
+const inputKasanGaku = document.getElementById('kasan_gaku');
+const inputShotokuGaku = document.getElementById('shotoku_gaku');
+const inputKazeiHyojun = document.getElementById('kazei_hyojun');
+const inputHojinZeigaku = document.getElementById('hojin_zeigaku');
+
+// 🔄 数値の連動計算処理
+function calculate() {
+    const tokiRieki = parseInt(inputTokiRieki.value) || 0;
+    const kasanGaku = parseInt(inputKasanGaku.value) || 0;
+
+    // 別表四の計算: 所得金額 = 当期利益 + 加算額
+    const shotokuGaku = tokiRieki + kasanGaku;
+    inputShotokuGaku.value = shotokuGaku;
+
+    // 別表一への連動: 課税標準 = 別表四の所得金額
+    inputKazeiHyojun.value = shotokuGaku;
+
+    // 法人税の計算 (15%と仮定、1000円未満切り捨て)
+    const zeigaku = Math.floor((shotokuGaku * 0.15) / 1000) * 1000;
+    inputHojinZeigaku.value = Math.max(0, zeigaku);
+}
+
+// 入力イベントの監視 (リアルタイム計算)
+inputTokiRieki.addEventListener('input', calculate);
+inputKasanGaku.addEventListener('input', calculate);
+
+
+// 💾 IndexedDB 処理 (セキュリティに優れたローカル保存)
+const dbName = "TaxAppDB";
+let db;
+
+const request = indexedDB.open(dbName, 1);
+request.onupgradeneeded = (e) => {
+    db = e.target.result;
+    db.createObjectStore("formData", { keyPath: "id" });
+};
+request.onsuccess = (e) => {
+    db = e.target.result;
+    loadData(); // 起動時に前回データをロード
+};
+
+// 保存処理
+function saveData() {
+    const tx = db.transaction("formData", "readwrite");
+    const store = tx.objectStore("formData");
+    const data = {
+        id: "tax_return_data",
+        tokiRieki: inputTokiRieki.value,
+        kasanGaku: inputKasanGaku.value
+    };
+    store.put(data);
+    tx.oncomplete = () => alert("ブラウザの安全な領域に保存しました！");
+}
+
+// 読み込み処理
+function loadData() {
+    const tx = db.transaction("formData", "readonly");
+    const store = tx.objectStore("formData");
+    const req = store.get("tax_return_data");
+    req.onsuccess = () => {
+        if (req.result) {
+            inputTokiRieki.value = req.result.tokiRieki;
+            inputKasanGaku.value = req.result.kasanGaku;
+            calculate();
+        } else {
+            calculate(); // 初期値計算
+        }
+    };
+}
