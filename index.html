@@ -3,66 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>簡易法人税申告書 PWA</title>
+    <title>別表連動申告システム</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a73e8">
+    <meta name="theme-color" content="#2b579a">
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 15px; background: #f5f5f5; color: #333; }
-        header { display: flex; justify-content: space-between; align-items: center; background: #1a73e8; color: white; padding: 10px 15px; margin: -15px -15px 15px -15px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2 { border-bottom: 2px solid #1a73e8; padding-bottom: 5px; margin-top: 0; font-size: 1.1rem; }
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        input[type="number"] { width: 120px; padding: 6px; text-align: right; border: 1px solid #ccc; border-radius: 4px; }
-        input[readonly] { background: #e9ecef; }
-        .btn { background: #34a853; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 15px; }
-        .btn:hover { background: #2d8e47; }
+        body {
+            font-family: "MS PGothic", "Hiragino Kaku Gothic ProN", sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 10px;
+            font-size: 13px;
+        }
+        header {
+            background-color: #2b579a;
+            color: white;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; font-size: 16px; }
+        .system-bar {
+            background: #e1dfdd;
+            padding: 5px 15px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .sys-btn {
+            background: #fff;
+            border: 1px solid #999;
+            padding: 3px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+        .sys-btn:hover { background: #eee; }
+        
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        /* 申告書用紙（帳票）風スタイル */
+        .hyou {
+            background: #fff;
+            border: 2px solid #555;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }
+        .hyou-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            text-decoration: underline;
+        }
+        .hyou-subtitle {
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        /* 帳票テーブル */
+        table.tax-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #333;
+        }
+        table.tax-table th, table.tax-table td {
+            border: 1px solid #777;
+            padding: 4px 6px;
+            height: 24px;
+        }
+        /* ミロク風のセルの色分け */
+        .col-num {
+            background-color: #e2efda; /* 薄い緑（区分・番号用） */
+            text-align: center;
+            width: 30px;
+            font-weight: bold;
+        }
+        .col-title {
+            background-color: #f2f2f2; /* グレー（項目名） */
+            font-weight: bold;
+            width: 45%;
+        }
+        .col-input {
+            background-color: #fff;
+            padding: 1px 2px !important;
+        }
+        .col-readonly {
+            background-color: #fff2cc; /* 薄い黄色（自動連動・計算用セル） */
+        }
+        
+        /* 入力枠の見た目（ミロク風） */
+        table.tax-table input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            text-align: right;
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+            font-weight: bold;
+            box-sizing: border-box;
+            background: transparent;
+        }
+        table.tax-table input:focus {
+            background-color: #e8f0fe;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>法人税申告連動ツール</h1>
-    <span id="status">接続中</span>
+    <h1>法人税申告書 連動入力システム (MJS風)</h1>
+    <span id="status" style="font-size: 11px; background: #34a853; padding: 2px 6px; border-radius: 3px;">オンライン</span>
 </header>
 
-<div class="grid">
-    <div class="card">
-        <h2>別表四（所得の簡易計算）</h2>
-        <div class="row">
-            <label>当期利益：</label>
-            <input type="number" id="toki_rieki" value="10000000">
-        </div>
-        <div class="row">
-            <label>加算（交際費など）：</label>
-            <input type="number" id="kasan_gaku" value="1000000">
-        </div>
-        <hr>
-        <div class="row">
-            <strong style="color:red;">所得金額 (自動計算)：</strong>
-            <input type="number" id="shotoku_gaku" readonly value="0">
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>別表一（法人税額の計算）</h2>
-        <div class="row">
-            <label>課税標準 (別表四より自動連動)：</label>
-            <input type="number" id="kazei_hyojun" readonly value="0">
-        </div>
-        <div class="row">
-            <label>税率 (仮に15%固定)：</label>
-            <input type="text" value="15%" readonly style="width:120px; text-align:right; padding:6px; border:1px solid #ccc; background:#e9ecef;">
-        </div>
-        <hr>
-        <div class="row">
-            <strong style="color:blue;">法人税額 (自動計算)：</strong>
-            <input type="number" id="hojin_zeigaku" readonly value="0">
-        </div>
-    </div>
+<div class="system-bar">
+    <button class="sys-btn" onclick="saveData()">[F1] データ保存</button>
+    <button class="sys-btn" onclick="location.reload()">[F5] 画面再読込</button>
 </div>
 
-<button class="btn" onclick="saveData()">ブラウザ(IndexedDB)に保存</button>
+<div class="container">
+
+    <div class="hyou">
+        <div class="hyou-title">別表四</div>
+        <div class="hyou-subtitle">各事業年度の所得の金額の計算に関する明細書</div>
+        
+        <table class="tax-table">
+            <thead>
+                <tr style="background: #d9d9d9;">
+                    <th colspan="2">区　　分</th>
+                    <th style="width: 10px;">申</th>
+                    <th>申告金額（円）</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="col-num">1</td>
+                    <td class="col-title">当期利益（又は当期欠損額）</td>
+                    <td></td>
+                    <td class="col-input">
+                        <input type="number" id="toki_rieki" value="10000000">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-num">2</td>
+                    <td class="col-title" style="padding-left: 15px;">加算：交際費等の損金不算入額</td>
+                    <td></td>
+                    <td class="col-input">
+                        <input type="number" id="kasan_gaku" value="1000000">
+                    </td>
+                </tr>
+                <tr style="border-top: 2px solid #333;">
+                    <td class="col-num" style="background-color: #fce4d6;">48</td>
+                    <td class="col-title" style="background-color: #fce4d6;">所得金額（又は欠損金額）</td>
+                    <td style="background-color: #fce4d6;"></td>
+                    <td class="col-readonly">
+                        <input type="number" id="shotoku_gaku" readonly value="0">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="hyou">
+        <div class="hyou-title">別表一（一）</div>
+        <div class="hyou-subtitle">内国法人の各事業年度の所得に対する法人税申告書</div>
+        
+        <table class="tax-table">
+            <thead>
+                <tr style="background: #d9d9d9;">
+                    <th colspan="2">区　　分</th>
+                    <th style="width: 10px;">番</th>
+                    <th>金額（円）</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="col-num">1</td>
+                    <td class="col-title">課税標準となる所得金額 (別表四より)</td>
+                    <td>①</td>
+                    <td class="col-readonly">
+                        <input type="number" id="kazei_hyojun" readonly value="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-num">2</td>
+                    <td class="col-title">上の所得に対する税率 (仮15%)</td>
+                    <td></td>
+                    <td style="background: #f2f2f2; text-align: right; font-weight: bold; padding-right: 10px; font-size: 14px;">
+                        15.00 %
+                    </td>
+                </tr>
+                <tr style="border-top: 2px solid #333;">
+                    <td class="col-num" style="background-color: #d9e1f2;">14</td>
+                    <td class="col-title" style="background-color: #d9e1f2;">差引法人税額（千円未満切捨）</td>
+                    <td style="background-color: #d9e1f2;">⑭</td>
+                    <td class="col-readonly">
+                        <input type="number" id="hojin_zeigaku" readonly value="0">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
 
 <script src="app.js"></script>
 </body>
